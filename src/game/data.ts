@@ -439,8 +439,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: "investor-ghost",
     title: "投资人变卦",
+    speaker: "vc-zhou",
     scene:
-      "TS（投资意向书）都签了，领投方突然说『内部流程需要再看看』。你的律师提醒：对方可能在同时看你的竞争对手。账上的钱只够撑两个月了。",
+      "周远帆：「TS 我们内部重新过了一遍，流程上需要再看看。你先别急，有消息我第一时间告诉你。」\n电话挂了。你的律师提醒：对方可能在同时看你的竞争对手。账上的钱只够撑两个月了。",
     minStage: 3, weight: 7, once: true,
     choices: [
       {
@@ -583,8 +584,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: "pr-crisis",
     title: "社交媒体公关危机",
+    speaker: "reporter-wen",
     scene:
-      "一条微博/推特冲上热搜：一位用户控诉你们的产品导致他损失了一笔钱，配图、时间线、聊天记录一应俱全。评论区已经失控，有媒体来采访。",
+      "温记者：「那条控诉帖你们看到了吧？评论区已经失控了。截至发稿前，方便给个回应吗？」\n一条微博/推特冲上热搜：一位用户控诉你们的产品导致他损失了一笔钱，配图、时间线、聊天记录一应俱全。",
     minStage: 3, weight: 6,
     choices: [
       {
@@ -696,8 +698,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: "angel-check",
     title: "种子轮的「霸王条款」",
+    speaker: "angel-li",
     scene:
-      "一位出手阔绰的天使投资人给 TS 加了几个小字：完全棘轮反稀释条款、一票否决权、创始人 3 年内不得离职。你的律师皱眉：这是『毒丸』。",
+      "李曼姨：「条款我让律师顺了一遍，加了几条小字——都是为了保护我的钱，你别多想。」\n你接过 TS：完全棘轮反稀释条款、一票否决权、创始人 3 年内不得离职。你的律师皱眉：这是『毒丸』。",
     minStage: 3, weight: 6, condition: (s) => s.stage === "seed" || s.stage === "seriesA",
     choices: [
       {
@@ -1047,8 +1050,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: "family-pressure",
     title: "家里的电话",
+    speaker: "mom",
     scene:
-      "三年没回家过年了。今天妈妈的电话很平静：『你爸的检查报告出来了，情况不太好。家里不缺钱，就缺你回来一趟。』你看着刚融到的钱和排满的发布计划。",
+      "妈：「你爸的检查报告出来了，情况不太好。家里不缺钱，就缺你回来一趟。」\n三年没回家过年了。电话这头的妈妈很平静。你看着刚融到的钱和排满的发布计划。",
     minStage: 3, weight: 5,
     choices: [
       {

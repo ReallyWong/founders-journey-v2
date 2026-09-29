@@ -8,6 +8,7 @@ import {
 } from "@/game/engine";
 import { saveGame } from "@/game/save";
 import BrokerPanel from "@/components/BrokerPanel";
+import DialogCard from "@/components/DialogCard";
 import { canOpenBrokerage } from "@/game/engine";
 import { equityAt as brokerEquity } from "@/game/market";
 import { ymOf } from "@/game/engine";
@@ -363,9 +364,24 @@ export default function GameScreen({ state, setState }: Props) {
           <Card className="w-full max-w-2xl bg-white border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle className="text-xl text-slate-900">{state.pendingDecision.title}</CardTitle>
-              <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{state.pendingDecision.scene}</p>
+              {/* v2.1：有 speaker 时 scene 由 DialogCard 渲染为台词气泡；否则保留旁白段落 */}
+              {!state.pendingDecision.speaker && !isInterview && (
+                <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{state.pendingDecision.scene}</p>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* v2.1 对话化：带 speaker 的事件用 NPC 气泡渲染 scene + 选项 */}
+              {!lesson && !isInterview && state.pendingDecision.speaker && (
+                <DialogCard
+                  state={state}
+                  decision={state.pendingDecision}
+                  revealed={revealed}
+                  setState={setState}
+                  setRevealed={setRevealed}
+                  onChoice={handleChoice}
+                  effectSummary={effectSummary}
+                />
+              )}
               {!lesson && isInterview && (
                 <div className="space-y-3">
                   <div className="text-xs text-slate-500">从下面选出你要认真准备的 3 个访谈问题（已选 {pickedQs.length}/3 · 预期洞察强度 {qScore}/9）：</div>
@@ -392,7 +408,7 @@ export default function GameScreen({ state, setState }: Props) {
                 </div>
               )}
 
-              {!lesson && !isInterview && (
+              {!lesson && !isInterview && !state.pendingDecision.speaker && (
                 <div className="space-y-2">
                   {state.pendingDecision.choices.map((c) => {
                     const decKey = `${state.pendingDecision!.eventId ?? state.pendingDecision!.title}:${c.id}`;

@@ -110,7 +110,8 @@ export interface Effects {
 export interface GameEvent {
   id: string;
   title: string;
-  scene: string; // 场景描述（美剧式叙事）
+  scene: string; // 场景描述（美剧式叙事）；v2.1 起支持「名字：台词」分段 → 对话气泡
+  speaker?: string; // v2.1：说话 NPC id（npcs.ts roster）；缺省=旁白气泡
   minStage: number;
   maxStage?: number;
   weight: number;
@@ -237,6 +238,7 @@ export interface PendingDecision {
   eventId?: string;
   title: string;
   scene: string;
+  speaker?: string; // v2.1：说话 NPC id（npcs.ts roster）；缺省=旁白气泡
   choices: Choice[];
   investor?: Investor;
   candidate?: Candidate;

@@ -1103,7 +1103,7 @@ function triggerEventById(s: GameState, eventId: string): GameState {
   let n = { ...s };
   n.tags = [...n.tags, `ev-${ev.id}`];
   n.eventCooldown = 1;
-  n.pendingDecision = { kind: "event", eventId: ev.id, title: ev.title, scene: ev.scene, choices: ev.choices };
+  n.pendingDecision = { kind: "event", eventId: ev.id, title: ev.title, scene: ev.scene, speaker: ev.speaker, choices: ev.choices };
   return n;
 }
 
@@ -1123,7 +1123,7 @@ function maybeTriggerEvent(s: GameState): GameState {
     let n = { ...s };
     n.tags = [...n.tags, `ev-${egg.id}`];
     n.eventCooldown = 2;
-    n.pendingDecision = { kind: "event", eventId: egg.id, title: egg.title, scene: egg.scene, choices: egg.choices };
+    n.pendingDecision = { kind: "event", eventId: egg.id, title: egg.title, scene: egg.scene, speaker: egg.speaker, choices: egg.choices };
     return n;
   }
   const eligible = EVENTS.filter((ev) => {
