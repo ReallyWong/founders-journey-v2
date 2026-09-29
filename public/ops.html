@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>创业人生 · 运营数据看板</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: linear-gradient(135deg, #fffbeb, #ffffff, #f0f9ff); color: #1e293b; min-height: 100vh; padding: 24px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 900; }
+  .sub { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; min-width: 140px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .card .num { font-size: 28px; font-weight: 800; }
+  .card .lbl { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .panel h2 { font-size: 15px; margin-bottom: 12px; color: #334155; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bar-name { width: 180px; text-align: right; color: #475569; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #f1f5f9; border-radius: 6px; height: 20px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width .4s; }
+  .bar-val { width: 60px; color: #334155; font-weight: 600; }
+  .grade-s { color: #f59e0b; } .grade-a { color: #059669; } .grade-good { color: #6366f1; } .grade-bad { color: #e11d48; }
+  .fallback { display: none; margin-top: 12px; }
+  textarea { width: 100%; height: 110px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font-size: 12px; font-family: monospace; }
+  button { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+  button:hover { background: #818cf8; }
+  .note { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .bar-name { width: 110px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 创业人生 · 运营数据看板</h1>
+  <p class="sub">匿名通关数据聚合 · 数据源 Supabase（永久存储） · 仅含对局结果（结局/行业/地区/难度），不含任何个人信息</p>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="panel">
+    <h2>🏁 结局分布</h2>
+    <div id="endings"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>🏭 行业分布</h2>
+      <div id="industries"></div>
+    </div>
+    <div class="panel">
+      <h2>🌍 地区分布</h2>
+      <div id="regions"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>🎚️ 难度选择分布</h2>
+      <div id="difficulties"></div>
+    </div>
+    <div class="panel">
+      <h2>🎬 剧本模式 vs 标准模式</h2>
+      <div id="scenarios"></div>
+      <div class="note">剧本模式通关的结局会计入结局分布；此处展示两者的对局占比。</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🕒 最近对局</h2>
+    <div id="recent" style="font-size:12px;color:#475569;line-height:1.9"></div>
+    <div class="fallback" id="fallback">
+      <div class="note" style="color:#b45309">无法直连数据源（网络受限）。你可以手动粘贴 ntfy 主题的 JSON 消息（格式：每行一个 {"message": "..."}），点按钮合并统计：</div>
+      <textarea id="paste" placeholder='{"id":"...","message":"{\\"endingId\\":\\"ipo\\",...}"}'></textarea>
+      <button onclick="mergePaste()">合并统计</button>
+    </div>
+    <div class="note">本看板将每次拉取的数据与本机缓存合并，长期累积统计。清空浏览器站点数据会重置累积。</div>
+  </div>
+</div>
+
+<script>
+const TOPIC = "https://ntfy.sh/fj-founders-journey-v3/json?poll=1";
+const CACHE_KEY = "fj_ops_cache_v1";
+// Supabase：永久数据源（新加坡项目，匿名只读聚合视图）
+const SB_URL = "https://tejyzdubrbiigouznaeh.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlanl6ZHVicmJpaWdvdXpuYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MDkzMTgsImV4cCI6MjA5NDM4NTMxOH0._m7GLDjF2b6dLkQIQoTo4UrYVwDBwtr4i3hHZrVHm9g";
+const ENDING_NAMES = { ipo:"🏛️ 上市敲钟", acquired:"🤝 被收购退出", acquihire:"🧩 人才收购", shutdown:"🕯️ 体面关停", bankrupt:"💸 破产清算", runaway:"🏃 欠债跑路", burnout:"🩺 健康崩塌", "groupon-end":"🤝 千团大战·幸存者合并", "groupon-dead":"💀 千团大战·炮灰", "mask-end":"🌬️ 口罩风云·高位套现", "mask-crash":"📉 口罩风云·一地鸡毛" };
+const INDUSTRY_NAMES = { ai:"🤖 AI SaaS", ecom:"📦 跨境电商", fintech:"💳 金融科技", consumer:"📱 消费级App", hardware:"🔧 智能硬件", game:"🎮 游戏工作室", traditional:"🍜 传统行业", angel:"😇 天使投资人", energy:"⚡ 工业能源", biotech:"💊 生物制药", entertainment:"🎬 影视文娱", vcpe:"💼 VC/PE基金" };
+const REGION_NAMES = { shenzhen:"🇨🇳 深圳", singapore:"🇸🇬 新加坡", berlin:"🇩🇪 柏林", london:"🇬🇧 伦敦", silicon:"🇺🇸 硅谷", austin:"🤠 奥斯汀", beijing:"🏯 北京", shanghai:"🌆 上海", nyc:"🗽 纽约", hongkong:"🇭🇰 香港", tokyo:"🇯🇵 东京", israel:"🇮🇱 特拉维夫" };
+const DIFF_NAMES = { easy:"🎓 教学", standard:"⚖️ 标准", realism:"🔥 真实模式" };
+const GRADE_OF = { ipo:"S", acquired:"A", acquihire:"B", shutdown:"B", bankrupt:"D", runaway:"F", burnout:"C", "groupon-end":"A", "groupon-dead":"C", "mask-end":"A", "mask-crash":"D" };
+
+let cache = { runs: 0, endings: {}, industries: {}, regions: {}, difficulties: {}, scenarios: {}, recent: [] };
+try { const raw = localStorage.getItem(CACHE_KEY); if (raw) cache = JSON.parse(raw); } catch {}
+
+function save() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch {} }
+
+function ingest(r) {
+  if (!r || !r.endingId) return;
+  cache.runs++;
+  const bump = (obj, key) => { key = key || "unknown"; obj[key] = (obj[key] || 0) + 1; };
+  bump(cache.endings, r.endingId);
+  bump(cache.industries, r.industryId);
+  bump(cache.regions, r.regionId);
+  bump(cache.difficulties, r.difficulty || "standard");
+  bump(cache.scenarios, r.scenarioId ? "剧本模式" : "标准模式");
+  cache.recent.unshift({ t: r.ts, endingId: r.endingId, industryId: r.industryId, regionId: r.regionId, difficulty: r.difficulty, scenarioId: r.scenarioId, months: r.months, grade: r.grade });
+  cache.recent = cache.recent.slice(0, 30);
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function barList(el, counts, nameMap, colorFn) {
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(1, ...entries.map(e=>e[1]));
+  el.innerHTML = entries.map(([k,v]) => {
+    const name = (nameMap && nameMap[k]) || k;
+    const cls = colorFn ? colorFn(k) : "";
+    return `<div class="bar-row"><div class="bar-name ${cls}" title="${esc(k)}">${esc(name)}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div><div class="bar-val">${v}</div></div>`;
+  }).join("") || '<div class="note">暂无数据</div>';
+}
+
+function gradeCls(endingId) {
+  const g = GRADE_OF[endingId];
+  return g === "S" ? "grade-s" : g === "A" ? "grade-a" : (g === "D" || g === "F") ? "grade-bad" : "grade-good";
+}
+
+function render() {
+  const good = (cache.endings.ipo||0) + (cache.endings.acquired||0) + (cache.endings["groupon-end"]||0) + (cache.endings["mask-end"]||0);
+  const death = (cache.endings.bankrupt||0) + (cache.endings.runaway||0) + (cache.endings.burnout||0);
+  document.getElementById("cards").innerHTML = `
+    <div class="card"><div class="num">${cache.runs}</div><div class="lbl">累计对局</div></div>
+    <div class="card"><div class="num grade-s">${good}</div><div class="lbl">成功退出 (S/A)</div></div>
+    <div class="card"><div class="num grade-bad">${death}</div><div class="lbl">悲剧结局 (D/F/C)</div></div>
+    <div class="card"><div class="num">${Object.keys(cache.endings).length}</div><div class="lbl">已观测结局种类</div></div>
+    <div class="card"><div class="num">${Object.keys(cache.scenarios).length ? (cache.scenarios["剧本模式"]||0) : 0}</div><div class="lbl">剧本模式对局</div></div>`;
+  barList(document.getElementById("endings"), cache.endings, ENDING_NAMES, gradeCls);
+  barList(document.getElementById("industries"), cache.industries, INDUSTRY_NAMES);
+  barList(document.getElementById("regions"), cache.regions, REGION_NAMES);
+  barList(document.getElementById("difficulties"), cache.difficulties, DIFF_NAMES);
+  barList(document.getElementById("scenarios"), cache.scenarios);
+  document.getElementById("recent").innerHTML = cache.recent.slice(0, 12).map(r => {
+    const d = r.t ? new Date(r.t) : null;
+    const ts = d ? `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` : "";
+    return `<div><span class="${gradeCls(r.endingId)}">●</span> ${esc(ENDING_NAMES[r.endingId]||r.endingId)} ｜ ${esc(INDUSTRY_NAMES[r.industryId]||r.industryId||"?")} ｜ ${esc(REGION_NAMES[r.regionId]||r.regionId||"?")} ｜ ${esc(DIFF_NAMES[r.difficulty]||r.difficulty||"标准")}${r.scenarioId?" ｜ 🎬 "+esc(r.scenarioId):""} ｜ ${r.months||"?"} 个月 <span style="color:#94a3b8">${ts}</span></div>`;
+  }).join("") || '<div class="note">暂无数据</div>';
+}
+
+function mergePaste() {
+  const txt = document.getElementById("paste").value.trim();
+  if (!txt) return;
+  let n = 0;
+  for (const line of txt.split("\n")) {
+    try {
+      const msg = JSON.parse(line);
+      if (msg.message) { ingest(JSON.parse(msg.message)); n++; }
+    } catch {}
+  }
+  save(); render();
+  alert(`已合并 ${n} 条对局记录`);
+}
+
+function applyServer(stats, recent) {
+  const row = Array.isArray(stats) ? stats[0] : null;
+  if (!row) return false;
+  cache.runs = row.total || 0;
+  cache.endings = row.by_ending || {};
+  cache.industries = row.by_industry || {};
+  cache.regions = row.by_region || {};
+  cache.difficulties = row.by_difficulty || {};
+  cache.scenarios = {};
+  const mode = row.by_mode || {};
+  cache.scenarios["剧本模式"] = mode.scenario || 0;
+  cache.scenarios["标准模式"] = mode.standard || 0;
+  cache.recent = (recent || []).map(r => ({
+    t: r.created_at ? new Date(r.created_at).getTime() : null,
+    endingId: r.ending_id, industryId: r.industry_id, regionId: r.region_id,
+    difficulty: r.difficulty, scenarioId: r.scenario_id, months: r.months, grade: r.grade,
+  }));
+  return true;
+}
+
+async function loadSupabase() {
+  const h = { apikey: SB_ANON, Authorization: "Bearer " + SB_ANON };
+  const [stats, recent] = await Promise.all([
+    fetch(SB_URL + "/rest/v1/run_stats?select=*", { headers: h }).then(r => { if (!r.ok) throw 0; return r.json(); }),
+    fetch(SB_URL + "/rest/v1/recent_runs?select=*&limit=30", { headers: h }).then(r => { if (!r.ok) throw 0; return r.json(); }),
+  ]);
+  if (!applyServer(stats, recent)) throw 0;
+  save(); render();
+}
+
+async function load() {
+  render();
+  try { await loadSupabase(); return; } catch {}
+  try {
+    const res = await fetch(TOPIC);
+    if (!res.ok) throw new Error("http " + res.status);
+    const text = await res.text();
+    let n = 0;
+    for (const line of text.trim().split("\n")) {
+      if (!line) continue;
+      try {
+        const msg = JSON.parse(line);
+        if (msg.message) { ingest(JSON.parse(msg.message)); n++; }
+      } catch {}
+    }
+    save(); render();
+    if (n === 0) document.getElementById("fallback").style.display = "block";
+  } catch (e) {
+    document.getElementById("fallback").style.display = "block";
+  }
+}
+load();
+</script>
+</body>
+</html>

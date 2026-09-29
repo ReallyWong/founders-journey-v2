@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>创业人生 · 同局比拼年报</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: linear-gradient(135deg, #fffbeb, #ffffff, #f0f9ff); color: #1e293b; min-height: 100vh; padding: 24px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 900; }
+  .sub { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .seedbar { display: flex; gap: 8px; margin: 18px 0; }
+  input { flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; font-size: 14px; background: #fff; }
+  button { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #818cf8; }
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; min-width: 150px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .card .num { font-size: 24px; font-weight: 800; }
+  .card .lbl { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .panel h2 { font-size: 15px; margin-bottom: 12px; color: #334155; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: #64748b; font-weight: 600; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; }
+  tr:hover td { background: #f8fafc; }
+  .grade { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 2px solid currentColor; }
+  .gS { color: #f59e0b; } .gA { color: #059669; } .gB { color: #0ea5e9; } .gC { color: #64748b; } .gD { color: #f97316; } .gF { color: #e11d48; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bar-name { width: 170px; text-align: right; color: #475569; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #f1f5f9; border-radius: 6px; height: 20px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+  .bar-val { width: 44px; color: #334155; font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .note { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+  .empty { color: #94a3b8; font-size: 13px; padding: 20px 0; text-align: center; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .bar-name { width: 110px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏆 创业人生 · 同局比拼年报</h1>
+  <p class="sub">同一个比拼码 = 同一个随机种子 = 同一局人生。输入比拼码查看全班/全群成绩榜。</p>
+
+  <div class="seedbar">
+    <input id="seed" placeholder="比拼码，例如 CLASS-2026-A" />
+    <button onclick="loadBoard()">查看年报</button>
+  </div>
+
+  <div id="status" class="note"></div>
+  <div id="body" style="display:none">
+    <div class="cards" id="cards"></div>
+
+    <div class="panel">
+      <h2>🏅 成绩榜（按评级 → 用时排序）</h2>
+      <table>
+        <thead><tr><th>#</th><th>公司</th><th>结局</th><th>评级</th><th>用时</th><th>估值(万)</th><th>行业</th></tr></thead>
+        <tbody id="board"></tbody>
+      </table>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>🧭 结局分布</h2>
+        <div id="endings"></div>
+      </div>
+      <div class="panel">
+        <h2>⏱️ 用时分布</h2>
+        <div id="months"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>👑 本局之最</h2>
+      <div id="bests" class="cards"></div>
+    </div>
+  </div>
+  <div class="empty" id="empty"></div>
+
+  <p class="note" style="margin-top:12px">在游戏中输入同一比拼码开局，通关后成绩会自动出现在这里。页面数据实时聚合，无人工结算。｜ <a href="./ops.html">运营数据看板</a> ｜ <a href="./">返回游戏</a></p>
+</div>
+
+<script>
+const SB_URL = "https://tejyzdubrbiigouznaeh.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlanl6ZHVicmJpaWdvdXpuYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MDkzMTgsImV4cCI6MjA5NDM4NTMxOH0._m7GLDjF2b6dLkQIQoTo4UrYVwDBwtr4i3hHZrVHm9g";
+const ENDING_NAMES = { ipo:"🏛️ 上市敲钟", acquired:"🤝 被收购退出", acquihire:"🧩 人才收购", shutdown:"🕯️ 体面关停", bankrupt:"💸 破产清算", runaway:"🏃 欠债跑路", burnout:"🩺 健康崩塌", "groupon-end":"🤝 千团大战·幸存", "groupon-dead":"💀 千团大战·炮灰", "mask-end":"🌬️ 口罩风云·套现", "mask-crash":"📉 口罩风云·崩盘" };
+const INDUSTRY_NAMES = { ai:"🤖 AI SaaS", ecom:"📦 跨境电商", fintech:"💳 金融科技", consumer:"📱 消费App", hardware:"🔧 智能硬件", game:"🎮 游戏", traditional:"🍜 传统行业", angel:"😇 天使投资", energy:"⚡ 工业能源", biotech:"💊 生物制药", entertainment:"🎬 影视文娱", vcpe:"💼 VC/PE" };
+const GRADE_RANK = { S:7, A:6, B:5, C:4, D:3, F:2 };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function bars(el, counts, nameMap) {
+  const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const max = Math.max(1, ...entries.map(e => e[1]));
+  el.innerHTML = entries.map(([k,v]) =>
+    `<div class="bar-row"><div class="bar-name">${esc((nameMap && nameMap[k]) || k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div><div class="bar-val">${v}</div></div>`
+  ).join("") || '<div class="empty">暂无数据</div>';
+}
+
+function bestCard(label, value) {
+  return `<div class="card"><div class="num" style="font-size:17px">${value || "—"}</div><div class="lbl">${label}</div></div>`;
+}
+
+async function loadBoard() {
+  const seed = document.getElementById("seed").value.trim();
+  const status = document.getElementById("status");
+  const empty = document.getElementById("empty");
+  document.getElementById("body").style.display = "none";
+  empty.textContent = "";
+  if (!seed) { status.textContent = "请输入比拼码。"; return; }
+  status.textContent = "加载中……";
+  try {
+    const h = { apikey: SB_ANON, Authorization: "Bearer " + SB_ANON };
+    const tRes = await fetch(SB_URL + "/rest/v1/tournaments?seed=eq." + encodeURIComponent(seed) + "&select=id,seed,created_at,closes_at,status", { headers: h });
+    const tours = await tRes.json();
+    if (!Array.isArray(tours) || !tours.length) {
+      status.textContent = "";
+      empty.textContent = "还没人用这个比拼码开局。把「" + seed + "」发给朋友，第一局通关后年报就会出现在这里。";
+      return;
+    }
+    const t = tours[0];
+    const eRes = await fetch(SB_URL + "/rest/v1/tournament_entries?tournament_id=eq." + t.id + "&select=company,report,created_at", { headers: h });
+    const entries = await eRes.json();
+    status.textContent = `比拼码「${esc(t.seed)}」 · 建局 ${new Date(t.created_at).toLocaleString()} · ${t.status === "open" ? "进行中（24 小时封盘）" : "已封盘"}`;
+    if (!Array.isArray(entries) || !entries.length) {
+      empty.textContent = "已建局，等待第一位玩家通关……";
+      return;
+    }
+    empty.textContent = "";
+    document.getElementById("body").style.display = "block";
+
+    const rows = entries.map(en => ({ company: en.company, ...(en.report || {}) }));
+    rows.sort((a,b) => (GRADE_RANK[b.grade]||0) - (GRADE_RANK[a.grade]||0) || (a.months||999) - (b.months||999));
+
+    // 头部卡片
+    const sCount = rows.filter(r => r.grade === "S").length;
+    const good = rows.filter(r => ["S","A"].includes(r.grade)).length;
+    document.getElementById("cards").innerHTML = `
+      <div class="card"><div class="num">${rows.length}</div><div class="lbl">上榜公司</div></div>
+      <div class="card"><div class="num gS" style="color:#f59e0b">${sCount}</div><div class="lbl">上市敲钟 (S)</div></div>
+      <div class="card"><div class="num" style="color:#059669">${good}</div><div class="lbl">成功退出 (S/A)</div></div>
+      <div class="card"><div class="num">${rows.length ? Math.round(rows.reduce((a,r)=>a+(r.months||0),0)/rows.length) : "—"}</div><div class="lbl">平均用时（月）</div></div>`;
+
+    // 成绩榜
+    document.getElementById("board").innerHTML = rows.map((r,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><b>${esc(r.company)}</b></td>
+        <td>${esc(ENDING_NAMES[r.endingId] || r.endingId || "?")}</td>
+        <td><span class="grade g${esc(r.grade)}">${esc(r.grade || "?")}</span></td>
+        <td>${r.months != null ? r.months + " 个月" : "—"}</td>
+        <td>${r.valuation != null ? Number(r.valuation).toLocaleString() : "—"}</td>
+        <td>${esc(INDUSTRY_NAMES[r.industryId] || r.industryId || "—")}</td>
+      </tr>`).join("");
+
+    // 结局分布
+    const endCounts = {};
+    rows.forEach(r => { const k = r.endingId || "?"; endCounts[k] = (endCounts[k]||0)+1; });
+    bars(document.getElementById("endings"), endCounts, ENDING_NAMES);
+
+    // 用时分布（分桶）
+    const buckets = { "≤12 月":0, "13-24 月":0, "25-48 月":0, "49-96 月":0, ">96 月":0 };
+    rows.forEach(r => { const m = r.months ?? 0;
+      if (m <= 12) buckets["≤12 月"]++; else if (m <= 24) buckets["13-24 月"]++;
+      else if (m <= 48) buckets["25-48 月"]++; else if (m <= 96) buckets["49-96 月"]++; else buckets[">96 月"]++; });
+    bars(document.getElementById("months"), buckets);
+
+    // 本局之最
+    const ipos = rows.filter(r => r.endingId === "ipo").sort((a,b)=>a.months-b.months);
+    const richest = [...rows].sort((a,b)=>(b.valuation||0)-(a.valuation||0))[0];
+    const longest = [...rows].sort((a,b)=>(b.months||0)-(a.months||0))[0];
+    const worst = rows.filter(r => ["F","D"].includes(r.grade)).sort((a,b)=>a.months-b.months)[0];
+    document.getElementById("bests").innerHTML =
+      bestCard("⚡ 最快敲钟", ipos.length ? `${esc(ipos[0].company)} · ${ipos[0].months} 个月` : "无人上市") +
+      bestCard("💰 最高估值", richest ? `${esc(richest.company)} · ${Number(richest.valuation||0).toLocaleString()} 万` : "—") +
+      bestCard("🧗 最长续航", longest ? `${esc(longest.company)} · ${longest.months} 个月` : "—") +
+      bestCard("💀 最快翻车", worst ? `${esc(worst.company)} · ${worst.months} 个月` : "全员体面");
+  } catch (e) {
+    status.textContent = "";
+    empty.textContent = "加载失败（网络受限？）。请稍后重试。";
+  }
+}
+
+// 支持 ?seed=XXX 直达
+const q = new URLSearchParams(location.search).get("seed");
+if (q) { document.getElementById("seed").value = q; loadBoard(); }
+</script>
+</body>
+</html>
